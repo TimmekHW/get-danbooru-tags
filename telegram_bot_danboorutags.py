@@ -2,28 +2,19 @@
 
 import asyncio
 import re
-
 import json
-
 import aiohttp
 import re
 
 from aiogram.types import Message, Message
-
 from aiogram import Bot, Dispatcher, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
-
-
-
-
-
 
 dp = Dispatcher()
 router = Router()
 
 bot = Bot(token="TOKEN")
-
 
 # Функция для сохранения запросов в JSON
 def save_dan_request_to_json(url, tags):
@@ -40,12 +31,17 @@ async def cmd_dan(event: Message):
         return
 
     args = parts[1]
-    match = re.search(r'(\d+)$', args)
-    if match:
-        post_id = match.group(1)
+    # Проверяем, является ли аргумент числом (ID поста) или URL
+    if args.isdigit():
+        post_id = args
     else:
-        await event.answer("Пожалуйста, укажите правильный ID поста или URL.")
-        return
+        # Извлекаем ID из URL, если передан URL
+        match = re.search(r'/posts/(\d+)', args)
+        if match:
+            post_id = match.group(1)
+        else:
+            await event.answer("Пожалуйста, укажите правильный ID поста или URL.")
+            return
 
     url = f"https://danbooru.donmai.us/posts/{post_id}.json"
     await bot.send_chat_action(chat_id=event.chat.id, action="typing") #уведомление что пишется текст
