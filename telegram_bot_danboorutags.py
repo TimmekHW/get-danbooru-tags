@@ -1,5 +1,6 @@
 #pip install aiogram==3.2.0
 #pip install gradio-client==0.7.1
+#pip install beautifulsoup4
 import asyncio
 import re
 import json
@@ -9,6 +10,7 @@ import re
 import time
 import aiohttp
 
+from bs4 import BeautifulSoup
 
 from aiogram.types import Message, Message
 from aiogram import Bot, Dispatcher, Router
@@ -19,65 +21,74 @@ from gradio_client import Client
 dp = Dispatcher()
 router = Router()
 
-token ="6940648559:AAE-HM_9U6T2iPbF-GWXLNyBALDDKRy9oic"
-#token="UR_TELEGRAM_BOT_TOKEN"
+token="UR_TELEGRAM_BOT_TOKEN"
 bot = Bot(token)
 
 
 
 # Функция для запроса к Danbooru IQDB
-async def iqdb_query(image_url):
-    iqdb_url = "https://danbooru.donmai.us/iqdb_queries.json"
+async def iqdb_query(image_url, event, bot):
+    search_url = f"https://iqdb.org/?url={image_url}"
     async with aiohttp.ClientSession() as session:
-        async with session.post(iqdb_url, data={'file': image_url}) as response:
+        async with session.get(search_url) as response:
             if response.status == 200:
-                response_text = await response.text()  # Получаем текст ответа
-                match = re.search(r'post #(\d+)', response_text)
-                if match:
-                    post_id = match.group(1)  # Извлекаем ID поста
-                    return True, post_id
+                html_content = await response.text()
+                soup = BeautifulSoup(html_content, 'html.parser')
+                # Ищем блок с лучшим совпадением
+                best_match_block = soup.find('div', {'id': 'pages'}).find_all('table')[1]
+                # Ищем первую ссылку в этом блоке
+                
+                match_link = best_match_block.find('a', href=True)
+                if match_link and 'href' in match_link.attrs:
+                    
+                    # Извлекаем ID поста из URL
+                    post_id_match = re.search(r'/posts/(\d+)', match_link['href'])
+                    if post_id_match:
+                        post_id = post_id_match.group(1)  # Возвращаем только ID поста
+                        print (post_id)
+                        return await cmd_dan(event, bot, post_id)
+                                                
+                    else:
+                        return "Арт не найден в Danbooru. Используйте команду /tt."
+                    
                 else:
-                    return False, None
+                    return "Совпадение не найдено."
             else:
-                return False, None
+                return "Ошибка запроса к IQDB."
 
 
 # Обновленный обработчик команды /tags
 @dp.message(Command(commands=["tags"]))
 async def cmd_tags(event, token):
-    bot = Bot (token)
+    bot = Bot(token)
     if event.photo:
-        
         photo = event.photo[-1]
         file_id = photo.file_id
-        file = await bot.get_file(file_id)
-        file_path = file.file_path
-        image_url = f"https://api.telegram.org/file/bot{bot.token}/{file_path}"
-        # Запрос к Danbooru IQDB
-        iqdb_result, response_data = await iqdb_query(image_url)
-        if iqdb_result:
-            # Передаем только данные ответа в cmd_dan
-            await cmd_dan(event, response_data)
+        file = await bot.get_file(file_id)  # Получаем объект файла
+        file_path = file.file_path  # Извлекаем file_path
+
+        if file_path:
+            # Получаем URL изображения
+            image_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+            # Отправляем запрос на IQDB
+            iqdb_result = await iqdb_query(image_url, event, bot)
+            if iqdb_result and "http" in iqdb_result:
+                # Возвращаем ссылку на совпавшее изображение
+                return iqdb_result
+            else:
+                # Обработка ошибки или отсутствия совпадений
+                return iqdb_result
         else:
-            # Если изображение не найдено, предлагаем использовать /tt
-            #return "Арт не найден в Danbooru. Используйте команду /tt."
-            await event.answer("Арт не найден в Danbooru. Используйте команду /tt.", parse_mode=ParseMode.HTML)
+            await event.answer( "Ошибка: file_path не найден.")
     else:
-        #return "Пожалуйста, отправьте фото."
         await event.answer("Пожалуйста, отправьте фото.")
 
 @dp.message(Command(commands=['dan']))
-async def cmd_dan(event, bot, danbooru_result=None):
-    if danbooru_result:
-        # Обработка текстового ответа от IQDB
-        match = re.search(r'post #(\d+)', danbooru_result)
-        if match:
-            post_id = match.group(1)
-            url = f"https://danbooru.donmai.us/posts/{post_id}.json"
-        else:
-            #return "Не удалось найти ID поста в результате."
-            await event.answer("Не удалось найти ID поста в результате.", parse_mode=ParseMode.HTML)
-            
+async def cmd_dan(event, bot, post_id=None):
+    if post_id:
+        # ID поста уже передан напрямую, используем его
+        url = f"https://danbooru.donmai.us/posts/{post_id}.json"
+        args = post_id 
     else:
         parts = event.text.split(maxsplit=1)
         if len(parts) < 2:
