@@ -9,6 +9,6 @@ bot = Bot(token)
 Вы должны установить aiogram 3 прежде чем начать пользоваться:
 <code>pip install aiogram==3.2.0</code>
 <code>pip install gradio-client==0.7.1</code>
-![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/de6a8795-f776-4206-8367-4fe0e095c6dc)
 
+![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/de6a8795-f776-4206-8367-4fe0e095c6dc)
 ![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/a11f5683-3dc5-4a3e-8a8b-112554d72bfa)
