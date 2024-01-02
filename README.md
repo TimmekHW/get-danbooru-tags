@@ -11,4 +11,4 @@ bot = Bot(token)
 <code>pip install gradio-client==0.7.1</code>
 
 ![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/de6a8795-f776-4206-8367-4fe0e095c6dc)
-![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/a11f5683-3dc5-4a3e-8a8b-112554d72bfa)
+![image](https://github.com/TimmekHW/get-danbooru-tags/assets/94626112/88194da8-25cd-4763-bece-a76af3eff21c)
